@@ -1,0 +1,15 @@
+.metadata
+.metadata/*
+.DS_Store
+ConsoleRun
+ConsoleRun/*
+util/bin
+util/bin/*
+Services/bin
+Services/bin/*
+Net/bin
+Net/bin/*
+ConsoleApps/bin
+ConsoleApps/bin/*
+Lib/bin
+Lib/bin/*
