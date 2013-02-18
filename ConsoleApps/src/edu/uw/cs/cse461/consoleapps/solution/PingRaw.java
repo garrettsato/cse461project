@@ -104,7 +104,6 @@ public class PingRaw extends NetLoadableConsoleApp implements PingRawInterface {
 		}
 	}
 	
-
 	/**
 	 * Pings the host/port named by the arguments the number of times named by the arguments.
 	 * Returns the mean ping time of the trials.
