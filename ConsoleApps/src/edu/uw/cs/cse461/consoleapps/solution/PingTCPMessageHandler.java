@@ -98,7 +98,6 @@ public class PingTCPMessageHandler extends NetLoadableConsoleApp implements Ping
 		Socket tcpSocket = new Socket(hostIP, tcpPort);
 		TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(tcpSocket);
 		tcpMsgHandler.setTimeout(socketTimeout);
-		System.out.println("header: " + header);
 		tcpMsgHandler.sendMessage(header);		
 		tcpMsgHandler.sendMessage("");
 		

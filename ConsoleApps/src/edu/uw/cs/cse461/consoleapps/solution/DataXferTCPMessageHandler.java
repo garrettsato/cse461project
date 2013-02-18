@@ -33,10 +33,8 @@ public class DataXferTCPMessageHandler extends NetLoadableConsoleApp implements 
 		Socket sock = new Socket(hostIP, port); 
 		TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(sock);
 		tcpMsgHandler.setTimeout(timeout);
-		System.out.println("header: " + header);
 		tcpMsgHandler.sendMessage(header);
 		JSONObject transferSize = new JSONObject().put("transferSize", xferLength);
-		System.out.println("xferLength: " + xferLength);
 		tcpMsgHandler.sendMessage(transferSize);
 		
 		String okayStr = tcpMsgHandler.readMessageAsString();
@@ -44,13 +42,15 @@ public class DataXferTCPMessageHandler extends NetLoadableConsoleApp implements 
 			throw new IOException("Server did not respond with the okay string");
 		
 		while (amtXferred < xferLength) {
-			System.out.println("currenet amtXferred: " + amtXferred);
 			byte[] receiveBuf = tcpMsgHandler.readMessageAsBytes();
 			for (int i = 0; i < receiveBuf.length; i++) {
 				receivedBytes[amtXferred + i] = receiveBuf[i];
 			}
 			amtXferred += receiveBuf.length;
 		}
+		if (amtXferred != xferLength) 
+			throw new IOException("Server sent the wrong amount of data");
+		
 		return receivedBytes;
 	}
 
@@ -112,9 +112,7 @@ public class DataXferTCPMessageHandler extends NetLoadableConsoleApp implements 
 
 			for ( int index=0; index<DataXferRawService.NPORTS; index++ ) {
 
-				TransferRate.clear();
-				System.out.println("I should not be here\n\n\n\n\n\n");
-				
+				TransferRate.clear();				
 				int port = basePort + index;
 				int xferLength = DataXferRawService.XFERSIZE[index];
 
@@ -136,5 +134,4 @@ public class DataXferTCPMessageHandler extends NetLoadableConsoleApp implements 
 			System.out.println("Unanticipated exception: " + e.getMessage());
 		}
 	}
-
 }

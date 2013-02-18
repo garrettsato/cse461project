@@ -21,7 +21,7 @@ public class DataXferTCPMessageHandlerService extends DataXferServiceBase implem
 	private ServerSocket mServerSocket;
 	
 	public DataXferTCPMessageHandlerService() throws Exception {
-		super("dataxfertcpmessagehandlerservice");
+		super("dataxfertcpmessagehandler");
 		String serverIP = IPFinder.localIP();
 		if (serverIP == null) {
 			throw new Exception("IP is null");
@@ -38,18 +38,15 @@ public class DataXferTCPMessageHandlerService extends DataXferServiceBase implem
 					while ( !mAmShutdown ) {
 						Socket sock = null;
 						try {
-							//System.out.println("hi");
 							sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
-							System.out.println("socket was created");
+							System.out.println("hi");
 							// should really spawn a thread here, but the code is already complicated enough that we don't bother
 							TCPMessageHandler tcpMessageHandlerSocket = null;
 							try {
 								// this loop exits when readMessageAsString() throws an IOException indicating EOF, or 
 								// because it has timed out on the read
 								while ( true ) {
-									//Log.e(TAG, "hi");
-									//Log.w(TAG, "HI");
-									//System.out.println("\n\n\n");
+
 									tcpMessageHandlerSocket = new TCPMessageHandler(sock);
 									tcpMessageHandlerSocket.setTimeout(NetBase.theNetBase().config().getAsInt("net.timeout.socket", 5000));
 									tcpMessageHandlerSocket.setNoDelay(true);
@@ -63,7 +60,6 @@ public class DataXferTCPMessageHandlerService extends DataXferServiceBase implem
 									int transferSizeValue = transferSize.getInt("transferSize");
 									int amtXferred = 0;
 									tcpMessageHandlerSocket.sendMessage(RESPONSE_OKAY_STR);
-									byte[] buf = new byte[1000];
 									
 									while (amtXferred < transferSizeValue) { 
 										
@@ -81,23 +77,18 @@ public class DataXferTCPMessageHandlerService extends DataXferServiceBase implem
 								}
 							} catch (SocketTimeoutException e) {
 								Log.e(TAG, "Timed out waiting for data on tcp connection");
-								//System.out.println("Timed out waiting for data on tcp connection");
 							} catch (EOFException e) {
 								// normal termination of loop
 								Log.d(TAG, "EOF on tcpMessageHandlerSocket.readMessageAsString()");
-								//System.out.println("EOF on tcpMessageHandlerSocket.readMessageAsString()");
 
 							} catch (Exception e) {
 								Log.i(TAG, "Unexpected exception while handling connection: " + e.getMessage());
-								//System.out.println("Unexpected exception while handling connection: " + e.getMessage());
 
 							} finally {
 								if ( tcpMessageHandlerSocket != null ) try { tcpMessageHandlerSocket.close(); } catch (Exception e) {}
 							}
 						} catch (SocketTimeoutException e) {
 							// this is normal.  Just loop back and see if we're terminating.
-							//System.out.println("djfklsaf" + e.getMessage());
-
 						}
 					}
 				} catch (Exception e) {

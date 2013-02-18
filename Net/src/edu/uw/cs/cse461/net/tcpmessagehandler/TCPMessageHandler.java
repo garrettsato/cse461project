@@ -1,13 +1,10 @@
 package edu.uw.cs.cse461.net.tcpmessagehandler;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -16,7 +13,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import edu.uw.cs.cse461.net.base.NetBase;
-import edu.uw.cs.cse461.util.Log;
 
 
 /**
@@ -146,7 +142,6 @@ public class TCPMessageHandler implements TCPMessageHandlerInterface {
 	
 	@Override
 	public void sendMessage(byte[] buf) throws IOException {
-		System.out.println("sending message");
 		OutputStream os = sock.getOutputStream();
 		os.write(intToByte(buf.length));
 		os.flush();
@@ -193,21 +188,17 @@ public class TCPMessageHandler implements TCPMessageHandlerInterface {
 	
 	@Override
 	public byte[] readMessageAsBytes() throws IOException {
-		//System.out.println("Reading message...");
 		byte[] b = new byte[HEADER_SIZE];
 		InputStream is = sock.getInputStream();
 		int res = is.read(b);
 		int payloadLength = byteToInt(b);
-		//System.out.println(payloadLength);
 		if (payloadLength < 0 || payloadLength > this.maxMsgLen) 
 			throw new IOException("The length of the payload is not within bounds");
 		b = new byte[payloadLength];
 		res = is.read(b);
-		//System.out.println(new String(b));
 		if (res != payloadLength) {
 			throw new IOException("Length header did not match the size of the payload");
 		}
-		//System.out.println();
 		return b;
 	}
 	
