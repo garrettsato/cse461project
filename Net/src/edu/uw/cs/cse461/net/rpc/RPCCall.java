@@ -5,6 +5,7 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -114,7 +115,10 @@ public class RPCCall extends NetLoadableService {
 			int socketTimeout,        // max time to wait for reply
 			boolean tryAgain          // true if an invocation failure on a persistent connection should cause a re-try of the call, false to give up
 			) throws JSONException, IOException {
-		return null;
+		RPCCallerSocket rpcSock = new RPCCallerSocket(ip, port, false);
+		rpcSock.setSoTimeout(socketTimeout);
+		JSONObject obj = rpcSock.invoke(serviceName, method, userRequest);
+		return obj;
 	}
 	
 	@Override

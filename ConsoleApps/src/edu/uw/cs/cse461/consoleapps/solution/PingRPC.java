@@ -1,9 +1,11 @@
-package edu.uw.cs.cse461.consoleapps;
+package edu.uw.cs.cse461.consoleapps.solution;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.SocketTimeoutException;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import edu.uw.cs.cse461.net.base.NetBase;
@@ -12,13 +14,16 @@ import edu.uw.cs.cse461.net.rpc.RPCCall;
 import edu.uw.cs.cse461.service.EchoRPCService;
 import edu.uw.cs.cse461.service.EchoServiceBase;
 import edu.uw.cs.cse461.util.ConfigManager;
+import edu.uw.cs.cse461.util.SampledStatistic.ElapsedTime;
+import edu.uw.cs.cse461.util.SampledStatistic.ElapsedTimeInterval;
+import edu.uw.cs.cse461.consoleapps.PingInterface.PingRPCInterface;
 
-public class EchoRPC extends NetLoadableConsoleApp {
-	private static final String TAG="EchoRPC";
+public class PingRPC extends NetLoadableConsoleApp implements PingRPCInterface {
+	private static final String TAG="PingRPC";
 	
 	// ConsoleApp's must have a constructor taking no arguments
-	public EchoRPC() {
-		super("echorpc");
+	public PingRPC() {
+		super("pingrpc");
 	}
 	
 	@Override
@@ -77,4 +82,36 @@ public class EchoRPC extends NetLoadableConsoleApp {
 			System.out.println("EchoRPC.run() caught exception: " +e.getMessage());
 		}
 	}
+
+	@Override
+	public ElapsedTimeInterval ping(JSONObject header, String hostIP, int port,
+			int timeout, int nTrials) throws Exception {
+		// TODO Auto-generated method stub
+		for (int i = 0; i < nTrials; i++) {
+			try {
+				ElapsedTime.start("PingRCPTotal");
+				doRcpPing(header, hostIP, port, timeout);
+				ElapsedTime.stop("PingRCPTotal");
+			} catch (SocketTimeoutException e) {
+				ElapsedTime.abort("PingRCPTotal");
+				System.out.println("PingRCPTotal timed out: " + e.getMessage());
+			} catch (Exception e) {
+				ElapsedTime.abort("PingRCPTotal");
+				System.out.println("PingRCPTotal Exception: " + e.getMessage());
+			}
+		}
+		return ElapsedTime.get("PingRCPTotal");
+	}
+	
+	public void doRcpPing(JSONObject header, String hostIP, int port, int timeout) throws Exception {
+		JSONObject args = new JSONObject().put(EchoRPCService.HEADER_KEY, header)
+				  .put(EchoRPCService.PAYLOAD_KEY, "");
+		JSONObject response = RPCCall.invoke(hostIP, port, "echorpc", "echo", args, timeout);
+		System.out.println(response + ": " + timeout);
+		if (!response.getString(EchoRPCService.HEADER_KEY).equals(EchoServiceBase.RESPONSE_OKAY_STR)) {
+			throw new Exception("Got bad response header");
+		}
+	}
+
 }
+

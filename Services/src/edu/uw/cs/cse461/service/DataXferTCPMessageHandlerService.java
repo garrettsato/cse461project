@@ -39,7 +39,6 @@ public class DataXferTCPMessageHandlerService extends DataXferServiceBase implem
 						Socket sock = null;
 						try {
 							sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
-							System.out.println("hi");
 							// should really spawn a thread here, but the code is already complicated enough that we don't bother
 							TCPMessageHandler tcpMessageHandlerSocket = null;
 							try {
