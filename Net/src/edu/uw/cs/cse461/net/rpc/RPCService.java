@@ -6,6 +6,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ import edu.uw.cs.cse461.util.Log;
 public class RPCService extends NetLoadableService implements Runnable, RPCServiceInterface {
 	private static final String TAG="RPCService";
 	
-	private final HashMap<ServiceMethodTuple, RPCCallableMethod> callbacks = new HashMap<ServiceMethodTuple, RPCCallableMethod>();
+	private final HashMap<Map.Entry<String, String>, RPCCallableMethod> callbacks = new HashMap<Map.Entry<String, String>, RPCCallableMethod>();
 	private ServerSocket mServerSocket;
 	private int localPort;
 	
@@ -80,13 +81,25 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		
 		public SocketThread(Socket sock) {
 			this.sock = sock;
+			try {
+				sock.setSoTimeout(59901381);
+			} catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		@Override
 		public void run() {
 			// should really spawn a thread here, but the code is already complicated enough that we don't bother
+<<<<<<< HEAD
 			try {
+=======
+			try { 
+				System.out.println("got here");
+>>>>>>> hi
 				TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(sock);
 				JSONObject request = tcpMsgHandler.readMessageAsJSONObject();
+				System.out.println("did I get past the request");
 				String type = request.getString("type");
 				if (!type.equals("control")) {
 					throw new IOException("The type was not of type control");
@@ -117,6 +130,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 					if (!invocationType.equals("invoke")) {
 						throw new IOException("The type was not of type invoke");
 					}
+					System.out.println(invocation);
 					String serviceName = invocation.getString("app");
 					int invocationCallId = invocation.getInt("id");
 					String methodName = invocation.getString("method");
@@ -133,7 +147,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 				}
 								
 			} catch (Exception e) {
-
+				e.printStackTrace();
 			} finally {
 				try {
 					sock.close();
@@ -170,7 +184,25 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		
 		/*Thread rpcThread = new Thread() {
 			public void run() {
-				run();
+				while ( !mAmShutdown ) {
+					Socket sock = null;
+					try {
+						sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
+						// should really spawn a thread here, but the code is already complicated enough that we don't bother
+						Thread sockThread = new Thread(new SocketThread(sock));
+						System.out.println("wtf");
+						
+						sockThread.start();
+				
+						
+
+					} catch (SocketTimeoutException e) {
+						// this is normal.  Just loop back and see if we're terminating.
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 			}
 		};
 		rpcThread.start();*/
@@ -213,8 +245,8 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	 */
 	@Override
 	public synchronized void registerHandler(String serviceName, String methodName, RPCCallableMethod method) throws Exception {
-		ServiceMethodTuple methodServiceTuple = new ServiceMethodTuple(serviceName, methodName);
-		callbacks.put(methodServiceTuple, method);
+		Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<String, String>(serviceName, methodName);
+		callbacks.put(entry, method);
 	}
 	
 	/**
@@ -226,7 +258,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	 * @return The existing registration for that method of that service, or null if no registration exists.
 	 */
 	public RPCCallableMethod getRegistrationFor( String serviceName, String methodName) {
-		return callbacks.get(new ServiceMethodTuple(serviceName, methodName));
+		return callbacks.get(new AbstractMap.SimpleEntry<String, String>(serviceName, methodName));
 	}
 	
 	/**
