@@ -84,8 +84,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		@Override
 		public void run() {
 			// should really spawn a thread here, but the code is already complicated enough that we don't bother
-			try { 
-				System.out.println("entered");
+			try {
 				TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(sock);
 				JSONObject request = tcpMsgHandler.readMessageAsJSONObject();
 				String type = request.getString("type");
@@ -165,7 +164,6 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		mServerSocket = new ServerSocket();
 		mServerSocket.bind(new InetSocketAddress(serverIP, localPort));
 		mServerSocket.setSoTimeout( NetBase.theNetBase().config().getAsInt("net.timeout.granularity", 500));
-		System.out.println("Constructor");
 
 		Thread rpcThread = new Thread(this);
 		rpcThread.start();
@@ -185,7 +183,6 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	 */
 	@Override
 	public void run() {
-		System.out.println("RPC Service Run");
 		while ( !mAmShutdown ) {
 			Socket sock = null;
 			try {
