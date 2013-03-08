@@ -67,9 +67,15 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 			}
 			return false;
 		}
+		
+		@Override
+
+	    public int hashCode() {
+			return method.hashCode()+service.hashCode();
+	    }
 	}
 	
-	private class SocketThread implements Runnable { 
+	private class SocketThread implements Runnable {
 		private Socket sock;
 		
 		public SocketThread(Socket sock) {
@@ -79,6 +85,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		public void run() {
 			// should really spawn a thread here, but the code is already complicated enough that we don't bother
 			try { 
+				System.out.println("entered");
 				TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(sock);
 				JSONObject request = tcpMsgHandler.readMessageAsJSONObject();
 				String type = request.getString("type");
@@ -102,6 +109,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 					msg = new RPCResponseMessage(callid);
 				}
 				tcpMsgHandler.sendMessage(msg.marshall());
+				System.out.println("help me");
 				
 				while (true) { 
 			
@@ -157,13 +165,17 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		mServerSocket = new ServerSocket();
 		mServerSocket.bind(new InetSocketAddress(serverIP, localPort));
 		mServerSocket.setSoTimeout( NetBase.theNetBase().config().getAsInt("net.timeout.granularity", 500));
+		System.out.println("Constructor");
 
-		Thread rpcThread = new Thread() {
+		Thread rpcThread = new Thread(this);
+		rpcThread.start();
+		
+		/*Thread rpcThread = new Thread() {
 			public void run() {
 				run();
 			}
 		};
-		rpcThread.start();
+		rpcThread.start();*/
 	}
 	
 	
@@ -173,13 +185,13 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	 */
 	@Override
 	public void run() {
+		System.out.println("RPC Service Run");
 		while ( !mAmShutdown ) {
 			Socket sock = null;
 			try {
 				sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
 				// should really spawn a thread here, but the code is already complicated enough that we don't bother
 				Thread sockThread = new Thread(new SocketThread(sock));
-				System.out.println("wtf");
 				
 				sockThread.start();
 		
