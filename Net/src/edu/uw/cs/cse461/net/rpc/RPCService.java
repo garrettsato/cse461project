@@ -6,7 +6,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -38,68 +37,23 @@ import edu.uw.cs.cse461.util.Log;
  */
 public class RPCService extends NetLoadableService implements Runnable, RPCServiceInterface {
 	private static final String TAG="RPCService";
-	
+
 	private final HashMap<Map.Entry<String, String>, RPCCallableMethod> callbacks = new HashMap<Map.Entry<String, String>, RPCCallableMethod>();
 	private ServerSocket mServerSocket;
 	private int localPort;
-	
-	private class ServiceMethodTuple {
-		private String method;
-		private String service;
-		
-		public ServiceMethodTuple(String method, String service) { 
-			this.method = method;
-			this.service = service;
-		}
-		
-		public String getMethod() {
-			return method;
-		}
-		
-		public String getService() {
-			return service;
-		}
-		
-		@Override
-		public boolean equals(Object other) {
-			if (other instanceof ServiceMethodTuple) {
-				ServiceMethodTuple o = (ServiceMethodTuple) other;
-				return o.service.equals(this.service) && o.method.equals(this.method); 
-			}
-			return false;
-		}
-		
-		@Override
 
-	    public int hashCode() {
-			return method.hashCode()+service.hashCode();
-	    }
-	}
-	
 	private class SocketThread implements Runnable {
 		private Socket sock;
-		
+
 		public SocketThread(Socket sock) {
 			this.sock = sock;
-			try {
-				sock.setSoTimeout(59901381);
-			} catch (SocketException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
 		@Override
 		public void run() {
 			// should really spawn a thread here, but the code is already complicated enough that we don't bother
-<<<<<<< HEAD
 			try {
-=======
-			try { 
-				System.out.println("got here");
->>>>>>> hi
 				TCPMessageHandler tcpMsgHandler = new TCPMessageHandler(sock);
 				JSONObject request = tcpMsgHandler.readMessageAsJSONObject();
-				System.out.println("did I get past the request");
 				String type = request.getString("type");
 				if (!type.equals("control")) {
 					throw new IOException("The type was not of type control");
@@ -107,47 +61,45 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 				int callid = request.getInt("id");
 				JSONObject options = null;
 				boolean persist = false;
-				
+
 				if (request.has("options")) {
 					options = request.getJSONObject("options");
 					persist =  options.has("connection") && options.getString("connection").equals("keep-alive");
 				}
-				
+
 				RPCMessage msg = null;
-				
+
 				if (persist) {
 					msg = new RPCNormalResponseMessage(callid, options);
 				} else {
 					msg = new RPCResponseMessage(callid);
 				}
 				tcpMsgHandler.sendMessage(msg.marshall());
-				System.out.println("help me");
-				
+
 				while (true) { 
-			
+
 					JSONObject invocation = tcpMsgHandler.readMessageAsJSONObject();
 					String invocationType = invocation.getString("type");
 					if (!invocationType.equals("invoke")) {
 						throw new IOException("The type was not of type invoke");
 					}
-					System.out.println(invocation);
 					String serviceName = invocation.getString("app");
 					int invocationCallId = invocation.getInt("id");
 					String methodName = invocation.getString("method");
 					JSONObject args = invocation.getJSONObject("args");
-					
+
 					RPCCallableMethod method = getRegistrationFor(serviceName, methodName);
 					JSONObject value = method.handleCall(args);
 					RPCNormalResponseMessage reply = new RPCNormalResponseMessage(invocationCallId, value);
 					tcpMsgHandler.sendMessage(reply.marshall());
-					
+
 					if (!persist) {
 						break;
 					}
 				}
-								
+
 			} catch (Exception e) {
-				e.printStackTrace();
+
 			} finally {
 				try {
 					sock.close();
@@ -156,11 +108,11 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 					e.printStackTrace();
 				}
 			}
-	
+
 		}	
-	
+
 	}
-	
+
 	/**
 	 * Constructor.  Creates the Java ServerSocket and binds it to a port.
 	 * If the config file specifies an rpc.server.port value, it should be bound to that port.
@@ -181,34 +133,16 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 
 		Thread rpcThread = new Thread(this);
 		rpcThread.start();
-		
+
 		/*Thread rpcThread = new Thread() {
 			public void run() {
-				while ( !mAmShutdown ) {
-					Socket sock = null;
-					try {
-						sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
-						// should really spawn a thread here, but the code is already complicated enough that we don't bother
-						Thread sockThread = new Thread(new SocketThread(sock));
-						System.out.println("wtf");
-						
-						sockThread.start();
-				
-						
-
-					} catch (SocketTimeoutException e) {
-						// this is normal.  Just loop back and see if we're terminating.
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
+				run();
 			}
 		};
 		rpcThread.start();*/
 	}
-	
-	
+
+
 	/**
 	 * Executed by an RPCService-created thread.  Sits in loop waiting for
 	 * connections, then creates an RPCCalleeSocket to handle each one.
@@ -221,10 +155,10 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 				sock = mServerSocket.accept();  // if this fails, we want out of the while loop...
 				// should really spawn a thread here, but the code is already complicated enough that we don't bother
 				Thread sockThread = new Thread(new SocketThread(sock));
-				
+
 				sockThread.start();
-		
-				
+
+
 
 			} catch (SocketTimeoutException e) {
 				// this is normal.  Just loop back and see if we're terminating.
@@ -234,7 +168,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 			}
 		}
 	}
-	
+
 	/**
 	 * Services and applications with RPC callable methods register them with the RPC service using this routine.
 	 * Those methods are then invoked as callbacks when an remote RPC request for them arrives.
@@ -248,7 +182,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 		Map.Entry<String, String> entry = new AbstractMap.SimpleEntry<String, String>(serviceName, methodName);
 		callbacks.put(entry, method);
 	}
-	
+
 	/**
 	 * Some of the testing code needs to retrieve the current registration for a particular service and method,
 	 * so this interface is required.  You probably won't find a use for it in your code, though.
@@ -260,7 +194,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	public RPCCallableMethod getRegistrationFor( String serviceName, String methodName) {
 		return callbacks.get(new AbstractMap.SimpleEntry<String, String>(serviceName, methodName));
 	}
-	
+
 	/**
 	 * Returns the port to which the RPC ServerSocket is bound.
 	 * @return The RPC service's port number on this node
@@ -269,7 +203,7 @@ public class RPCService extends NetLoadableService implements Runnable, RPCServi
 	public int localPort() {
 		return localPort;
 	}
-	
+
 	@Override
 	public String dumpState() {
 		StringBuilder sb = new StringBuilder();

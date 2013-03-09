@@ -41,7 +41,7 @@ import edu.uw.cs.cse461.util.Log;
 	 * @throws IOException
 	 * @throws JSONException
 	 */
-	RPCCallerSocket(String ip, int port, boolean wantPersistent) throws IOException, JSONException {
+	RPCCallerSocket(String ip, int port, int socketTimeout, boolean wantPersistent) throws IOException, JSONException {
 		super(ip, port);	
 		
 		// save state
@@ -51,6 +51,7 @@ import edu.uw.cs.cse461.util.Log;
 		}
 		RPCControlMessage controlMsg = new RPCControlMessage("connect", options);
 		this.tcpMsgHandler = new TCPMessageHandler(this);
+		this.tcpMsgHandler.setTimeout(socketTimeout);
 		this.wantPersistent = wantPersistent;
 		this.id = controlMsg.id();
 		this.host = ip;
@@ -87,7 +88,6 @@ import edu.uw.cs.cse461.util.Log;
 		RPCInvokeMessage invokeMsg = new RPCInvokeMessage(serviceName, method, userRequest);
 		tcpMsgHandler.sendMessage(invokeMsg.marshall());
 		response = tcpMsgHandler.readMessageAsJSONObject();
-		System.out.println(response);
 		return response.getJSONObject("value");
 	}
 
@@ -95,5 +95,6 @@ import edu.uw.cs.cse461.util.Log;
 	 * Close this socket.
 	 */
 	synchronized public void discard() {
+		tcpMsgHandler.close();
 	}
 }

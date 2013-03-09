@@ -32,8 +32,6 @@ public class PingRPC extends NetLoadableConsoleApp implements PingRPCInterface {
 			// Eclipse doesn't support System.console()
 			BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
 			ConfigManager config = NetBase.theNetBase().config();
-
-			int timeout = config.getAsInt("net.timeout.socket", 500);
 			
 			String targetIP = config.getProperty("net.server.ip");
 			if ( targetIP == null ) {
@@ -48,40 +46,40 @@ public class PingRPC extends NetLoadableConsoleApp implements PingRPCInterface {
 			if ( targetTCPPortStr == null || targetTCPPortStr.trim().isEmpty() ) return;
 			int targetRPCPort = Integer.parseInt(targetTCPPortStr);
 
-			while ( true ) {
-				try {
+			try {
+				
+				// send message
+				JSONObject header = new JSONObject().put("tag", "echo");
+		
+				System.out.print("Enter number of trials: ");
+				String trialStr = console.readLine();
+				int nTrials = Integer.parseInt(trialStr);
 
-					System.out.print("Enter message to be echoed, or empty line to exit: ");
-					String msg = console.readLine();
-					if ( msg.isEmpty() ) return;
-					
-					// send message
-					JSONObject header = new JSONObject().put(EchoRPCService.HEADER_TAG_KEY, EchoRPCService.HEADER_STR);
-					JSONObject args = new JSONObject().put(EchoRPCService.HEADER_KEY, header)
-													  .put(EchoRPCService.PAYLOAD_KEY, msg);
-					JSONObject response = RPCCall.invoke(targetIP, targetRPCPort, "echorpc", "echo", args, timeout );
-					if ( response == null ) throw new IOException("RPC failed; response is null");
-					
-					// examine response
-					JSONObject rcvdHeader = response.optJSONObject(EchoRPCService.HEADER_KEY);
-					if ( rcvdHeader == null || !rcvdHeader.has(EchoRPCService.HEADER_TAG_KEY)||
-							!rcvdHeader.getString(EchoRPCService.HEADER_TAG_KEY).equalsIgnoreCase(EchoServiceBase.RESPONSE_OKAY_STR))
-						throw new IOException("Bad response header: got '" + rcvdHeader.toString() +
-								               "' but wanted a JSONOBject with key '" + EchoRPCService.HEADER_TAG_KEY + "' and string value '" +
-								               	EchoServiceBase.RESPONSE_OKAY_STR + "'");
-					
-					if ( response.has(EchoRPCService.PAYLOAD_KEY) )System.out.println(response.getString(EchoRPCService.PAYLOAD_KEY));
-					else System.out.println("No payload returned!?  (No payload sent?)");
-					
-				} catch (Exception e) {
-					System.out.println("????????");
-					System.out.println("Exception: " + e.getMessage());
-				} 
-			}
+				int socketTimeout = config.getAsInt("net.timeout.socket", 5000);
+				
+				System.out.println("Host: " + targetIP);
+				System.out.println("rcp port: " + targetTCPPortStr);
+				System.out.println("trials: " + nTrials);
+				
+				ElapsedTimeInterval udpResult = null;
+
+				if ( targetRPCPort != 0  ) {
+					ElapsedTime.clear();
+					// we rely on knowing the implementation of udpPing here -- we throw
+					// away the return value because we'll print the ElaspedTime stats
+					udpResult = ping(header, targetIP, targetRPCPort, socketTimeout, nTrials);
+				}
+				
+				if ( udpResult != null ) System.out.println("RPC: " + String.format("%.2f msec (%d failures)", udpResult.mean(), udpResult.nAborted()));
+
+			} catch (Exception e) {
+				System.out.println("Exception: " + e.getMessage());
+			} 
 		} catch (Exception e) {
-			System.out.println("EchoRPC.run() caught exception: " +e.getMessage());
+			System.out.println("PingRPC.run() caught exception: " +e.getMessage());
 		}
 	}
+	
 
 	@Override
 	public ElapsedTimeInterval ping(JSONObject header, String hostIP, int port,
@@ -89,29 +87,24 @@ public class PingRPC extends NetLoadableConsoleApp implements PingRPCInterface {
 		// TODO Auto-generated method stub
 		for (int i = 0; i < nTrials; i++) {
 			try {
-				ElapsedTime.start("PingRCPTotal");
+				ElapsedTime.start("PingRPCTotal");
 				doRcpPing(header, hostIP, port, timeout);
-				ElapsedTime.stop("PingRCPTotal");
+				ElapsedTime.stop("PingRPCTotal");
 			} catch (SocketTimeoutException e) {
-				ElapsedTime.abort("PingRCPTotal");
-				System.out.println("PingRCPTotal timed out: " + e.getMessage());
+				ElapsedTime.abort("PingRPCTotal");
+				System.out.println("PingRPCTotal timed out: " + e.getMessage());
 			} catch (Exception e) {
-				ElapsedTime.abort("PingRCPTotal");
-				System.out.println("PingRCPTotal Exception: " + e.getMessage());
+				ElapsedTime.abort("PingRPCTotal");
+				System.out.println("PingRPCTotal Exception: " + e.getMessage());
 			}
 		}
-		return ElapsedTime.get("PingRCPTotal");
+		return ElapsedTime.get("PingRPCTotal");
 	}
 	
 	public void doRcpPing(JSONObject header, String hostIP, int port, int timeout) throws Exception {
 		JSONObject args = new JSONObject().put(EchoRPCService.HEADER_KEY, header)
 				  .put(EchoRPCService.PAYLOAD_KEY, "");
-		JSONObject response = RPCCall.invoke(hostIP, port, "echorpc", "echo", args, timeout);
-		System.out.println(response + ": " + timeout);
-		if (!response.getString(EchoRPCService.HEADER_KEY).equals(EchoServiceBase.RESPONSE_OKAY_STR)) {
-			throw new Exception("Got bad response header");
-		}
+		RPCCall.invoke(hostIP, port, "echorpc", "echo", args, timeout);
 	}
-
 }
 

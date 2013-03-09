@@ -80,6 +80,8 @@ public class TCPMessageHandler implements TCPMessageHandlerInterface {
 		this.sock = sock;
 		this.sock.setSoTimeout(NetBase.theNetBase().config().getAsInt("net.timeout.socket", 15000));
 		this.maxMsgLen = NetBase.theNetBase().config().getAsInt("tcpmessagehandler.maxmsglength", 2097148);
+		sock.setReceiveBufferSize(this.maxMsgLen);
+		sock.setSendBufferSize(this.maxMsgLen);
 	}
 	
 	/**

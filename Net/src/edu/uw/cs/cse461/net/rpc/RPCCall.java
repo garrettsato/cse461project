@@ -2,6 +2,7 @@ package edu.uw.cs.cse461.net.rpc;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -32,6 +33,9 @@ import edu.uw.cs.cse461.util.Log;
  */
 public class RPCCall extends NetLoadableService {
 	private static final String TAG="RPCCall";
+	
+	private final HashMap<String, RPCCallerSocket> connections = new HashMap<String, RPCCallerSocket>();
+
 
 	//-------------------------------------------------------------------------------------------
 	//-------------------------------------------------------------------------------------------
@@ -52,7 +56,7 @@ public class RPCCall extends NetLoadableService {
 	 * @throws IOException
 	 */
 	public static JSONObject invoke(
-			String ip,				  // ip or dns name of remote host
+			String ip,			 		  // ip or dns name of remote host
 			int port,                 // port that RPC is listening on on the remote host
 			String serviceName,       // name of the remote service
 			String method,            // name of that service's method to invoke
@@ -115,14 +119,37 @@ public class RPCCall extends NetLoadableService {
 			int socketTimeout,        // max time to wait for reply
 			boolean tryAgain          // true if an invocation failure on a persistent connection should cause a re-try of the call, false to give up
 			) throws JSONException, IOException {
-		RPCCallerSocket rpcSock = new RPCCallerSocket(ip, port, false);
-		rpcSock.setSoTimeout(socketTimeout);
-		JSONObject obj = rpcSock.invoke(serviceName, method, userRequest);
-		return obj;
+		try {
+			RPCCallerSocket rpcSock = null;
+			if (connections.containsKey(ip)) {
+				rpcSock = connections.get(ip);
+			} else {
+				rpcSock = new RPCCallerSocket(ip, port, socketTimeout, false);
+				connections.put(ip, rpcSock);
+			}
+			JSONObject obj = rpcSock.invoke(serviceName, method, userRequest);
+			return obj;
+		} catch (JSONException e) {
+			if (tryAgain) {
+				connections.remove(ip).discard();
+				return _invoke(ip, port, serviceName, method, userRequest, socketTimeout, false);
+			}
+			throw e;
+		} catch (IOException e) {
+			if (tryAgain) {
+				connections.remove(ip).discard();
+				return _invoke(ip, port, serviceName, method, userRequest, socketTimeout, false);
+			}
+			throw e;
+		}
 	}
 	
 	@Override
 	public void shutdown() {
+		Collection<RPCCallerSocket> cons = connections.values();
+		for (RPCCallerSocket sock: cons) {
+			sock.discard();
+		}
 	}
 	
 	@Override
